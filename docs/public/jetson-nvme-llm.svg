@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Jetson NVMe LLM</title>
+  <desc id="desc">A flat icon showing an edge device, NVMe drive, and local model node.</desc>
+  <rect width="128" height="128" rx="28" fill="#101820"/>
+  <rect x="25" y="28" width="78" height="48" rx="8" fill="#2A9D8F"/>
+  <rect x="33" y="36" width="18" height="18" rx="4" fill="#F4F1DE"/>
+  <rect x="56" y="38" width="38" height="5" rx="2.5" fill="#F4F1DE"/>
+  <rect x="56" y="50" width="28" height="5" rx="2.5" fill="#F4F1DE"/>
+  <rect x="34" y="85" width="60" height="16" rx="5" fill="#E9C46A"/>
+  <rect x="42" y="91" width="28" height="4" rx="2" fill="#101820"/>
+  <circle cx="88" cy="93" r="3" fill="#101820"/>
+  <path d="M64 76v9" stroke="#F4F1DE" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="28" cy="28" r="5" fill="#E76F51"/>
+  <circle cx="100" cy="28" r="5" fill="#E76F51"/>
+  <circle cx="28" cy="76" r="5" fill="#E76F51"/>
+  <circle cx="100" cy="76" r="5" fill="#E76F51"/>
+</svg>
