@@ -1,0 +1,17 @@
+{
+  "name": "jetson-orin-nano-super-nvme-fix",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev docs --host 127.0.0.1",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs --host 127.0.0.1",
+    "check:shell": "bash -n scripts/*.sh llm-experiment/*.sh",
+    "check:large": "bash scripts/check-no-large-files.sh",
+    "check": "npm run check:shell && npm run check:large && npm run docs:build"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
