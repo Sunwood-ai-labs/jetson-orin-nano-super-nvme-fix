@@ -30,7 +30,7 @@ compute capability 8.7
 | --- | ---: | --- |
 | `gemma4:e2b` | 7.2 GB | Pull succeeded, generation was killed by OOM |
 | `batiai/gemma4-e2b:q4` | 3.4 GB | Worked with GPU offload |
-| `eslider/bonsai-1.7b` | 248 MB | Pull succeeded, runner failed to load on this Jetson/Ollama setup |
+| `eslider/bonsai-1.7b` | 248 MB | Stock Ollama failed, but `bonsai-ollama` + native PrismML `llama-server` worked |
 | `qwen3:0.6b` | 522 MB | Worked with GPU offload as a lightweight fallback |
 
 Model URLs:
@@ -60,7 +60,21 @@ Small `num_predict` values may return an empty visible response with this Gemma 
 
 ## Bonsai-like Lightweight Follow-up
 
-`eslider/bonsai-1.7b` was extremely small and pulled successfully, but failed during model load on both the default CUDA-backed Ollama service and a CPU-only Ollama serve process. The failure looked like a runner/model compatibility issue, not a memory-capacity issue.
+`eslider/bonsai-1.7b` was extremely small and pulled successfully, but failed during model load on both the default CUDA-backed Ollama service and a CPU-only Ollama serve process. The failure was a Q1_0 runner/model compatibility issue, not a memory-capacity issue.
+
+It did work after switching to the dedicated path:
+
+```text
+bonsai-ollama proxy -> Jetson-native PrismML llama-server -> Bonsai-1.7B-Q1_0.gguf
+```
+
+Verified output through the Ollama-compatible proxy:
+
+```text
+こんにちは！
+```
+
+The PrismML direct timing for the short smoke test showed about `11.14 tok/s` decode on CPU.
 
 `qwen3:0.6b` worked as the practical lightweight fallback:
 

@@ -218,7 +218,7 @@ tokens_per_sec: 21.81
 
 Gemma 4 Q4 のあと、さらに軽い Bonsai 系モデルも試しました。
 
-- `eslider/bonsai-1.7b`: pull成功、ただし Jetson + Ollama 0.24.0 ではロード時に runner が落ちて実行不可
+- `eslider/bonsai-1.7b`: 標準Ollamaでは実行不可。ただし `bonsai-ollama` + Jetson上でビルドした PrismML `llama-server` 経由で実行成功
 - `qwen3:0.6b`: pull成功、100% GPUで実行成功、API上のdecode速度は約52.8 tok/s
 
 詳細ログ:

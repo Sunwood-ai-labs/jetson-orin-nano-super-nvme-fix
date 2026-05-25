@@ -114,7 +114,7 @@ Ollama detected the Jetson Orin CUDA backend and could run the Q4 quantized Gemm
 | --- | --- | --- |
 | `gemma4:e2b` | https://ollama.com/library/gemma4:e2b | Pull succeeded, generation hit OOM on 8GB |
 | `batiai/gemma4-e2b:q4` | https://ollama.com/batiai/gemma4-e2b | Worked with GPU offload |
-| `eslider/bonsai-1.7b` | https://ollama.com/eslider/bonsai-1.7b | Pull succeeded, runner failed to load on this Jetson/Ollama setup |
+| `eslider/bonsai-1.7b` | https://ollama.com/eslider/bonsai-1.7b | Stock Ollama failed, but worked through `bonsai-ollama` + Jetson-native PrismML `llama-server` |
 | `qwen3:0.6b` | https://ollama.com/library/qwen3:0.6b | Worked as a Bonsai-like lightweight fallback with GPU offload |
 
 Observed smoke-test result:
