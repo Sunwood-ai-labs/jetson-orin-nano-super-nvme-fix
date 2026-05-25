@@ -214,6 +214,17 @@ tokens_per_sec: 21.81
 
 詳細は [llm-experiment/README.md](llm-experiment/README.md) にまとめています。
 
+## Bonsai系の軽量モデル追加実験
+
+Gemma 4 Q4 のあと、さらに軽い Bonsai 系モデルも試しました。
+
+- `eslider/bonsai-1.7b`: pull成功、ただし Jetson + Ollama 0.24.0 ではロード時に runner が落ちて実行不可
+- `qwen3:0.6b`: pull成功、100% GPUで実行成功、API上のdecode速度は約52.8 tok/s
+
+詳細ログ:
+
+- [llm-experiment/bonsai-and-lightweight-models.md](llm-experiment/bonsai-and-lightweight-models.md)
+
 ## リポジトリ構成
 
 ```text
