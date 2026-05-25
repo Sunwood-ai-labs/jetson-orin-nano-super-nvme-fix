@@ -1,210 +1,121 @@
-# Jetson Orin Nano Super NVMe Boot Fix
+<p align="center">
+  <img src="docs/public/jetson-nvme-llm.svg" width="132" alt="Jetson NVMe LLM icon">
+</p>
 
-SDカードなしで Jetson Orin Nano Super 8GB を NVMe SSD から起動し、その上で Ollama + Gemma 4 系ローカルLLMを動かした実験記録です。
+<h1 align="center">Jetson Orin Nano Super NVMe Boot Fix</h1>
+
+<p align="center">
+  Reproducible notes for booting a Jetson Orin Nano Super 8GB from NVMe without a microSD card, then running a Gemma 4-class local LLM with Ollama.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Sunwood-ai-labs/jetson-orin-nano-super-nvme-fix/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Sunwood-ai-labs/jetson-orin-nano-super-nvme-fix/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Sunwood-ai-labs/jetson-orin-nano-super-nvme-fix/actions/workflows/pages.yml"><img alt="Pages" src="https://github.com/Sunwood-ai-labs/jetson-orin-nano-super-nvme-fix/actions/workflows/pages.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
+</p>
+
+<p align="center">
+  <a href="README.ja.md">日本語 README</a> ·
+  <a href="https://sunwood-ai-labs.github.io/jetson-orin-nano-super-nvme-fix/">Documentation</a> ·
+  <a href="docs/ja/article.md">Japanese article</a>
+</p>
 
 > [!WARNING]
-> これは NVIDIA 公式の NVMe フラッシュ手順そのものではありません。公式の正攻法は Ubuntu ホストで Jetson を Recovery Mode に入れ、SDK Manager または Linux for Tegra の `l4t_initrd_flash.sh` を使う方法です。このリポジトリは「SDカードイメージを NVMe SSD に書き込んだあと、root デバイス指定だけを修正して起動させた」実験的な復旧手順を記録します。
+> This is not NVIDIA's official NVMe flashing path. The official path is to use an Ubuntu host with the Jetson in Recovery Mode and flash with SDK Manager or Linux for Tegra tools such as `l4t_initrd_flash.sh`. This repository documents an experimental recovery flow: write the Jetson Orin Nano SD-card image to an NVMe SSD, then patch the Linux root-device setting so the image boots from NVMe.
 
-## 何を修正したか
+## ✨ What This Repository Contains
 
-起動できなかった原因は、Jetson の Linux 起動設定が microSD カードを rootfs として探していたことです。
+- A reproducible field guide for the `mmcblk0p1 not found` boot failure
+- The exact `extlinux.conf` root-device change used in this experiment
+- Safety notes for destructive `dd` writes on macOS
+- Scripts for inspecting and patching `extlinux.conf` inside an ext4 APP image
+- Local LLM experiment notes for Ollama + Gemma 4-class models on Jetson Orin Nano Super 8GB
+- GitHub Pages documentation and CI checks for scripts, docs, and accidental large-file commits
 
-修正したファイル:
+## 🧭 The Core Fix
 
-```text
-/boot/extlinux/extlinux.conf
-```
-
-変更内容:
+The boot failure happened because the image still pointed Linux at a microSD-card root filesystem:
 
 ```diff
 - root=/dev/mmcblk0p1
 + root=/dev/nvme0n1p1
 ```
 
-`/dev/mmcblk0p1` は microSD カード側のデバイス名です。今回は SD カードを使わず、M.2 NVMe SSD の root パーティションから起動したかったため、`/dev/nvme0n1p1` に変更しました。
+The edited file is:
 
-実際の差分証跡:
+```text
+/boot/extlinux/extlinux.conf
+```
+
+Evidence:
 
 - [logs/extlinux-before.conf](logs/extlinux-before.conf)
 - [logs/extlinux-after.conf](logs/extlinux-after.conf)
 
-## 使ったOSイメージ
+## 💿 OS Image Source
 
-NVIDIA 公式の Jetson Orin Nano Developer Kit Getting Started Guide から SD カードイメージを取得しました。
+The experiment used NVIDIA's Jetson Orin Nano Developer Kit SD-card image.
 
-- 公式手順: https://developer.nvidia.com/embedded/learn/get-started-jetson-orin-nano-devkit
-- Software setup: https://developer.nvidia.com/embedded/learn/jetson-orin-nano-devkit-user-guide/software_setup.html
-- 使用ファイル名: `jp62-r1-orin-nano-sd-card-image.zip`
-- ZIP内のイメージ: `sd-blob.img`
+- NVIDIA getting started guide: https://developer.nvidia.com/embedded/learn/get-started-jetson-orin-nano-devkit
+- NVIDIA software setup guide: https://developer.nvidia.com/embedded/learn/jetson-orin-nano-devkit-user-guide/software_setup.html
+- Downloaded file name: `jp62-r1-orin-nano-sd-card-image.zip`
+- Image inside the ZIP: `sd-blob.img`
 
-NVIDIA の通常手順では、このイメージは microSD カードへ書き込む想定です。NVMe を正式なプライマリストレージとして使う場合は、SDK Manager / `l4t_initrd_flash.sh` を使う方が正攻法です。
+NVIDIA normally expects this image to be written to a microSD card. For a production-quality NVMe installation, use NVIDIA's official SDK Manager / Linux for Tegra flashing workflow instead.
 
-## 再現手順
+## ⚡ Quick Reproduction Outline
 
-### 1. M.2 SSDをMacに接続してディスク番号を確認
+Replace `/dev/disk5` and `/dev/disk5s1` with the disk identifiers from your own machine.
 
-```sh
-diskutil list
-```
+1. Confirm the external NVMe disk on macOS:
 
-今回の実験では外付けM.2 SSDが `/dev/disk5` でした。
+   ```sh
+   diskutil list
+   ```
 
-> [!CAUTION]
-> `dd` の書き込み先を間違えると別ディスクを破壊します。以降の `/dev/disk5` は必ず自分の環境のディスク番号に置き換えてください。
+2. Write the SD-card image to the NVMe SSD:
 
-### 2. SDカードイメージをM.2 SSDへ書き込む
+   ```sh
+   unzip -p ~/Downloads/jp62-r1-orin-nano-sd-card-image.zip sd-blob.img | sudo dd of=/dev/rdisk5 bs=4m status=progress
+   sync
+   diskutil eject /dev/disk5
+   ```
 
-```sh
-unzip -p ~/Downloads/jp62-r1-orin-nano-sd-card-image.zip sd-blob.img | sudo dd of=/dev/rdisk5 bs=4m status=progress
-sync
-diskutil eject /dev/disk5
-```
+3. If the Jetson stops with `ERROR: mmcblk0p1 not found`, reconnect the NVMe SSD to macOS and copy the APP partition:
 
-### 3. Jetsonに戻して起動し、失敗内容を確認
+   ```sh
+   mkdir -p ~/Prj/jetson-orin-nano-super-nvme-fix/{work,logs}
+   sudo dd if=/dev/rdisk5s1 of=~/Prj/jetson-orin-nano-super-nvme-fix/work/app.img bs=4m status=progress
+   ```
 
-この状態では、環境によって以下のように止まります。
+4. Patch the APP image from a Linux environment with `debugfs`:
 
-```text
-Root device found: mmcblk0p1
-ERROR: mmcblk0p1 not found
-```
+   ```sh
+   apt update
+   apt install -y e2fsprogs
+   ./scripts/patch-extlinux-root.sh work/app.img
+   ```
 
-これは `/boot/extlinux/extlinux.conf` の `root=/dev/mmcblk0p1` が原因です。
+5. Write the patched APP image back:
 
-### 4. M.2 SSDを再度Macに接続し、APPパーティションを吸い出す
+   ```sh
+   sudo dd if=~/Prj/jetson-orin-nano-super-nvme-fix/work/app.img of=/dev/rdisk5s1 bs=4m status=progress
+   sync
+   diskutil eject /dev/disk5
+   ```
 
-```sh
-mkdir -p ~/Prj/jetson-orin-nano-super-nvme-fix/{downloads,work,logs}
-diskutil list /dev/disk5
-sudo dd if=/dev/rdisk5s1 of=~/Prj/jetson-orin-nano-super-nvme-fix/work/app.img bs=4m status=progress
-```
+Full steps are in the [documentation site](https://sunwood-ai-labs.github.io/jetson-orin-nano-super-nvme-fix/) and [Japanese article](docs/ja/article.md).
 
-今回のAPPパーティションは `/dev/disk5s1` でした。実際のパーティション一覧は [logs/diskutil-before-fix.txt](logs/diskutil-before-fix.txt) に残しています。
+## 🧠 Local LLM Result
 
-### 5. Docker上のLinuxでext4イメージを編集
+Ollama detected the Jetson Orin CUDA backend and could run the Q4 quantized Gemma 4-class model.
 
-macOS標準ではext4を書き換えられないため、Ubuntuコンテナで `debugfs` を使いました。
+| Model | URL | Result |
+| --- | --- | --- |
+| `gemma4:e2b` | https://ollama.com/library/gemma4:e2b | Pull succeeded, generation hit OOM on 8GB |
+| `batiai/gemma4-e2b:q4` | https://ollama.com/batiai/gemma4-e2b | Worked with GPU offload |
 
-```sh
-docker run --rm -it \
-  -v ~/Prj/jetson-orin-nano-super-nvme-fix/work:/work \
-  ubuntu:24.04 bash
-```
-
-コンテナ内:
-
-```sh
-apt update
-apt install -y e2fsprogs
-
-debugfs -R "cat /boot/extlinux/extlinux.conf" /work/app.img > /work/extlinux.conf
-sed -i 's#root=/dev/mmcblk0p1#root=/dev/nvme0n1p1#g' /work/extlinux.conf
-
-cat > /work/debugfs.cmd <<'EOF'
-rm /boot/extlinux/extlinux.conf
-write /work/extlinux.conf /boot/extlinux/extlinux.conf
-EOF
-
-debugfs -w -f /work/debugfs.cmd /work/app.img
-debugfs -R "cat /boot/extlinux/extlinux.conf" /work/app.img
-exit
-```
-
-### 6. 修正済みAPPイメージをM.2 SSDへ書き戻す
-
-```sh
-sudo dd if=~/Prj/jetson-orin-nano-super-nvme-fix/work/app.img of=/dev/rdisk5s1 bs=4m status=progress
-sync
-diskutil eject /dev/disk5
-```
-
-これでM.2 SSDをJetsonへ戻すと、NVMe rootで起動しました。
-
-## SSHとjtop
-
-SSHキーを登録すると、Macから以下で入れます。
-
-```sh
-ssh jetson-orin
-```
-
-Jetsonの状態監視には `jtop` を入れました。
-
-```sh
-sudo apt update
-sudo apt install -y python3-pip
-sudo pip3 install -U jetson-stats
-sudo systemctl restart jtop.service
-jtop
-```
-
-## Ollama + Gemma 4実験
-
-Ollamaをインストール:
-
-```sh
-curl -fsSL https://ollama.com/install.sh -o /tmp/ollama-install.sh
-sudo sh /tmp/ollama-install.sh
-ollama --version
-```
-
-今回の結果:
-
-```text
-ollama version is 0.24.0
-```
-
-### 公式 `gemma4:e2b`
-
-- URL: https://ollama.com/library/gemma4:e2b
-- サイズ: 7.2GB
-- 結果: pull は成功、推論時に OOM kill
-
-確認ログ:
-
-```sh
-journalctl -u ollama --no-pager -n 100
-```
-
-代表的なエラー:
-
-```text
-ollama.service: A process of this unit has been killed by the OOM killer.
-```
-
-### 動いたQ4量子化版
-
-- URL: https://ollama.com/batiai/gemma4-e2b
-- モデル: `batiai/gemma4-e2b:q4`
-- サイズ: 3.4GB
-- 結果: Jetson Orin Nano Super 8GB上で推論成功
-
-```sh
-ollama pull batiai/gemma4-e2b:q4
-ollama run batiai/gemma4-e2b:q4
-```
-
-確認:
-
-```sh
-ollama ps
-```
-
-結果:
-
-```text
-NAME                    PROCESSOR    CONTEXT
-batiai/gemma4-e2b:q4    100% GPU     1024
-```
-
-APIスモークテスト:
-
-```sh
-./llm-experiment/run-gemma4-q4-smoke-test.sh
-```
-
-実測:
+Observed smoke-test result:
 
 ```text
 Konnichiwa.
@@ -212,39 +123,48 @@ eval_count: 205
 tokens_per_sec: 21.81
 ```
 
-詳細は [llm-experiment/README.md](llm-experiment/README.md) にまとめています。
+Run the smoke test:
 
-## リポジトリ構成
+```sh
+./llm-experiment/run-gemma4-q4-smoke-test.sh
+```
+
+More details: [llm-experiment/README.md](llm-experiment/README.md)
+
+## 🗂️ Repository Layout
 
 ```text
 .
 ├── README.md
+├── README.ja.md
 ├── docs/
-│   └── article-ja.md
+│   ├── .vitepress/
+│   ├── guide/
+│   ├── ja/
+│   └── public/
 ├── llm-experiment/
-│   ├── README.md
-│   └── run-gemma4-q4-smoke-test.sh
 ├── logs/
-│   ├── diskutil-before-fix.txt
-│   ├── diskutil-after-fix.txt
-│   ├── extlinux-before.conf
-│   └── extlinux-after.conf
-└── scripts/
-    ├── inspect-extlinux.sh
-    └── patch-extlinux-root.sh
+├── scripts/
+└── .github/workflows/
 ```
 
-`work/app.img` やダウンロード済みOSイメージは巨大ファイルなのでGit管理対象外です。
+`work/app.img`, downloaded OS archives, and other bulky local artifacts are intentionally ignored by Git.
 
-## まとめ
+## ✅ Verification
 
-Jetson Orin Nano Super 8GBでも、NVMe起動環境を整え、軽量な量子化モデルを選べばローカルLLM実験ができます。
+Local checks:
 
-今回の重要ポイントは2つです。
+```sh
+npm install
+npm run check
+```
 
-1. SDカードイメージをNVMeへ書いた場合、`/boot/extlinux/extlinux.conf` の `root=` が microSD のままだと起動できない
-2. 公式 `gemma4:e2b` は8GB機には重いが、`batiai/gemma4-e2b:q4` はGPUで動いた
+CI checks:
 
-## License
+- shell syntax for repository scripts
+- no tracked files larger than 5 MiB
+- VitePress documentation build
+
+## 📄 License
 
 MIT
