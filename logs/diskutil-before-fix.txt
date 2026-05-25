@@ -1,0 +1,20 @@
+/dev/disk5 (external, physical):
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:      GUID_partition_scheme                        *512.1 GB   disk5
+   1:           Linux Filesystem                         134.2 MB   disk5s2
+   2:           Linux Filesystem                         786.4 KB   disk5s3
+   3:           Linux Filesystem                         33.2 MB    disk5s4
+   4:           Linux Filesystem                         134.2 MB   disk5s5
+   5:           Linux Filesystem                         786.4 KB   disk5s6
+   6:           Linux Filesystem                         33.2 MB    disk5s7
+   7:           Linux Filesystem                         83.9 MB    disk5s8
+   8:           Linux Filesystem                         524.3 KB   disk5s9
+   9:                        EFI NO NAME                 67.1 MB    disk5s10
+  10:           Linux Filesystem                         83.9 MB    disk5s11
+  11:           Linux Filesystem                         524.3 KB   disk5s12
+  12:           Linux Filesystem                         67.1 MB    disk5s13
+  13:           Linux Filesystem                         419.4 MB   disk5s14
+  14:           Linux Filesystem                         502.8 MB   disk5s15
+  15:           Linux Filesystem                         22.5 GB    disk5s1
+                    (free space)                         488.0 GB   -
+

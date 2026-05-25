@@ -1,0 +1,22 @@
+# Local disk images and downloads
+work/
+downloads/
+*.img
+*.raw
+*.zip
+*.xz
+*.tar
+*.tar.gz
+
+# macOS
+.DS_Store
+._*
+
+# Logs generated during local reruns
+*.log
+
+# Python / editor
+__pycache__/
+.venv/
+.idea/
+.vscode/
