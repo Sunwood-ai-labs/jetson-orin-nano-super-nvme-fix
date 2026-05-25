@@ -247,6 +247,127 @@ predicted_per_second: 11.14
 
 Conclusion: Bonsai 1.7B works on Jetson Orin Nano Super 8GB when routed through `bonsai-ollama` and a Jetson-native PrismML `llama-server` build. It does not work through stock Ollama alone.
 
+## Ternary Bonsai 1.7B GGUF
+
+Model:
+
+- `prism-ml/Ternary-Bonsai-1.7B-gguf`
+- Hugging Face page: https://huggingface.co/prism-ml/Ternary-Bonsai-1.7B-gguf
+- Tested file: `Ternary-Bonsai-1.7B-Q2_0.gguf`
+- Observed file size on Jetson: `442 MB`
+
+Download:
+
+```sh
+cd ~/Prj/bonsai/bonsai-ollama
+mkdir -p models/ternary-bonsai-1.7b
+curl -fL \
+  -o models/ternary-bonsai-1.7b/Ternary-Bonsai-1.7B-Q2_0.gguf \
+  https://huggingface.co/prism-ml/Ternary-Bonsai-1.7B-gguf/resolve/main/Ternary-Bonsai-1.7B-Q2_0.gguf
+```
+
+Run it with the Jetson-native PrismML `llama-server` build:
+
+```sh
+nohup ~/Prj/bonsai/llama.cpp/build-bonsai-cpu/bin/llama-server \
+  -m ~/Prj/bonsai/bonsai-ollama/models/ternary-bonsai-1.7b/Ternary-Bonsai-1.7B-Q2_0.gguf \
+  --host 127.0.0.1 \
+  --port 9989 \
+  --ctx-size 4096 \
+  --parallel 1 \
+  --threads 6 \
+  --no-webui \
+  > /tmp/ternary-bonsai-server.log 2>&1 &
+```
+
+Server load evidence:
+
+```text
+CPU_Mapped model buffer size = 436.16 MiB
+CPU KV buffer size = 448.00 MiB
+main: model loaded
+main: server is listening on http://127.0.0.1:9989
+```
+
+Direct OpenAI-compatible API test:
+
+```sh
+curl -sS http://127.0.0.1:9989/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ternary-bonsai","messages":[{"role":"user","content":"こんにちは。日本語で一文だけ自己紹介して。"}],"max_tokens":128,"temperature":0.2,"stream":false}'
+```
+
+Observed Japanese short response:
+
+```text
+こんにちは。私はBonsaiです。PrismMLが開発したAIアシスタントです。日本語で一文だけの自我紹介をします。
+```
+
+Observed timing:
+
+```text
+prompt_tokens: 26
+completion_tokens: 38
+predicted_per_second: 9.52
+```
+
+English short response was more natural:
+
+```text
+A local LLM is a large language model that runs entirely on a single device, such as a computer or mobile phone, without requiring access to a centralized server or cloud infrastructure.
+```
+
+Observed English timing:
+
+```text
+prompt_tokens: 24
+completion_tokens: 37
+predicted_per_second: 10.51
+```
+
+Streaming also worked through the direct PrismML server:
+
+```sh
+curl -N http://127.0.0.1:9989/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ternary-bonsai","messages":[{"role":"user","content":"Count from 1 to 10 slowly, separated by spaces."}],"max_tokens":64,"temperature":0.2,"stream":true}'
+```
+
+Observed stream result:
+
+```text
+22 chunks
+elapsed: 3.85 s
+output: 1 2 3 4 5 6 7 8 9 10
+```
+
+Stock Ollama import was also tested:
+
+```sh
+cat > /tmp/Modelfile.ternary <<'EOF'
+FROM /home/orin/Prj/bonsai/bonsai-ollama/models/ternary-bonsai-1.7b/Ternary-Bonsai-1.7B-Q2_0.gguf
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+<|im_start|>assistant
+{{ end }}"""
+PARAMETER stop <|im_end|>
+PARAMETER temperature 0.2
+EOF
+
+OLLAMA_HOST=http://127.0.0.1:11435 ollama create ternary-bonsai-1.7b-q2 -f /tmp/Modelfile.ternary
+```
+
+The model manifest was created, but generation failed at load time:
+
+```text
+HTTP 500
+model failed to load, this may be due to resource limitations or an internal error
+```
+
+Conclusion: `prism-ml/Ternary-Bonsai-1.7B-gguf` can run on Jetson Orin Nano Super 8GB through the Jetson-native PrismML `llama-server`. It is not a good Japanese-answer model in this test: short Japanese works, but longer Japanese answers still repeat and drift. English output is noticeably more stable.
+
 ## Qwen3 0.6B as a working lightweight fallback
 
 Model:
@@ -353,4 +474,6 @@ Conclusion: for an actually working lightweight model on this Jetson setup, `qwe
 | `batiai/gemma4-e2b:q4` | 3.4 GB | works | 100% GPU | about 21.8 tok/s |
 | `eslider/bonsai-1.7b` with stock Ollama | 248 MB | failed | not loaded | Q1_0 unsupported by stock Ollama runner |
 | `eslider/bonsai-1.7b` with bonsai-ollama + native PrismML server | 231 MB GGUF | works | CPU via PrismML server | about 11.1 tok/s on short test |
+| `prism-ml/Ternary-Bonsai-1.7B-gguf` Q2_0 with native PrismML server | 442 MB GGUF | works | CPU via PrismML server | about 9.5-10.5 tok/s; Japanese still weak |
+| `prism-ml/Ternary-Bonsai-1.7B-gguf` Q2_0 with stock Ollama import | 442 MB GGUF | failed | not loaded | manifest created, load returned HTTP 500 |
 | `qwen3:0.6b` | 522 MB | works | 100% GPU | about 52.8 tok/s API decode rate |

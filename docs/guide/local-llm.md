@@ -76,6 +76,20 @@ Verified output through the Ollama-compatible proxy:
 
 The PrismML direct timing for the short smoke test showed about `11.14 tok/s` decode on CPU.
 
+`prism-ml/Ternary-Bonsai-1.7B-gguf` was also tested with `Ternary-Bonsai-1.7B-Q2_0.gguf`:
+
+```text
+file size: 442 MB
+runtime: Jetson-native PrismML llama-server on port 9989
+result: works through direct OpenAI-compatible API
+decode: about 9.5-10.5 tok/s on CPU
+streaming: works
+```
+
+Stock Ollama import created a model manifest, but generation failed at load time with HTTP 500. The reliable route was the direct PrismML `llama-server` path.
+
+Japanese quality note: Ternary Bonsai handled very short Japanese, but longer Japanese answers still repeated and drifted. It was more stable in English than Japanese in this test.
+
 `qwen3:0.6b` worked as the practical lightweight fallback:
 
 ```text
